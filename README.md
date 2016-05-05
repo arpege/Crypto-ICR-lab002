@@ -116,4 +116,4 @@ bytearray(b"PK\x03\x04...\x00")
 
 ### Installation
 
-To test it on a UNIX environment you can execute `make install`. It will effectively copy the executable in the folder `/usr/local/bin`.
+To test it on a UNIX environment you can execute `make install`. It will effectively copy the executable in the folder `/usr/local/bin`. The utility will be available after that whit the `medivac` command.
