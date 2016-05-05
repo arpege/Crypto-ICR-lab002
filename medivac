@@ -28,12 +28,12 @@ def encrypt ( args ) :
     os.remove( ZIP_FILENAME )
   
   print ( """\n  Start compresion...\n""" )
-  with zipfile.ZipFile(ZIP_FILENAME, 'x') as myzip :
+  with zipfile.ZipFile(ZIP_FILENAME, 'x') as medzip :
     for medFile in args:
       if os.path.isfile( medFile ) :
         print ( '   * Adding ' + str ( medFile)  )
-        myzip.write( str ( medFile) )
-    myzip.close()
+        medzip.write( str ( medFile) )
+    medzip.close()
   print ( """\n\n  Start encryption...\n""" )
   
   fh = open( ZIP_FILENAME, 'rb' )
@@ -63,15 +63,16 @@ def encrypt ( args ) :
    ----------------------------------------
   """ )
   
-  
+
 # Decrypt function
-# Try to decrypt the file
+# Read the file in args[0]
+# check the signature and decrypt bytes
+# Create the zip temp file and unzip it
+# Output the result in args[1] if
+# args[1] is a directory, else in '.'
 def decrypt ( args ) :
   
   MedivacHeaders.printHeadDecrypt()
-  
-  # print ( len( args ) )
-  # print ( str( args ) )
   
   if len( args ) < 1 or len( args ) > 2 :
     print ( """  > Number of args incorect, exit decryption proccess\n""" )
@@ -81,10 +82,12 @@ def decrypt ( args ) :
   
   try:
     output = str( args[1] )
+    if not os.path.isdir( output ) :
+      output = '.'
   except IndexError:
     output = '.'
   
-  if ( os.path.isfile( medfile ) ) and ( os.path.isdir( output ) ) :
+  if ( os.path.isfile( medfile ) ) :
     print ( '  Reading file ' + medfile )
     print ( '  Output result in ' + output + '\n' )
     
@@ -106,8 +109,10 @@ def decrypt ( args ) :
         f.write( ba )
         f.close()
       
-      with zipfile.ZipFile( ZIP_FILENAME ) as myzip:
-        myzip.extractall( output )
+      with zipfile.ZipFile( ZIP_FILENAME ) as medzip:
+        if medzip.testzip() == None :
+          medzip.extractall( output )
+        medzip.close()
       
       print ( """\n  Removing temp files...\n""" )
       os.remove( ZIP_FILENAME )
