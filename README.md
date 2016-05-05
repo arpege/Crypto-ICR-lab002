@@ -14,6 +14,27 @@ Create an utility that could create and read medical's containers for sensible i
 Medivac is the name of the utility created to meet the criteria of the labo. It is a scrypt python that encapsulates several sensitive files in a single encrypted container.
 
 ### Usage
+*To install medivac on UNIX environment see the section below!*
+
+If you run `medivac [-h] [--help]` an help will be display. It's look like this:
+
+```
+  __  __          _ _                 
+ |  \/  |        | (_)                
+ | \  / | ___  __| |___   ____ _  ___ 
+ | |\/| |/ _ \/ _` | \ \ / / _` |/ __|
+ | |  | |  __/ (_| | |\ V / (_| | (__ 
+ |_|  |_|\___|\__,_|_| \_/ \__,_|\___|
+
+  Medivac version 1.0
+  Author: Joel Gugger <joel.gugger@master.hes-so.ch>
+  
+  Usage:  medivac source_file ...
+          medivac -d medivac_file [output_directory]
+  
+```
+
+
 **To encrypt several files**
 
 `./medivac file1.txt file2.txt [file path]`
@@ -54,7 +75,6 @@ bytearray(b"PK\x03\x04\x14\x00\x00\x00\x00\x00\xa6v...\x00")
   | Medivac encryption finish with success |
    ----------------------------------------
   
-
 ```
 
 
@@ -92,7 +112,6 @@ bytearray(b"PK\x03\x04...\x00")
   | Medivac decryption finish with success |
    ----------------------------------------
   
-
 ```
 
 ### Installation
