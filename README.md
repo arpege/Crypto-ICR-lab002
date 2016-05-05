@@ -37,7 +37,9 @@ If you run `medivac [-h] [--help]` an help will be display. It's look like this:
 
 **To encrypt several files**
 
-`./medivac file1.txt file2.txt [file path]`
+`medivac source_file ...`
+
+It's possible to gives one or more files. All the files are zip before encryption. The result will be store in a .medivac file. This file can never be change at all. If this is the case, it will become impossible to read.
 
 Scrypt output :
 
@@ -80,7 +82,7 @@ bytearray(b"PK\x03\x04\x14\x00\x00\x00\x00\x00\xa6v...\x00")
 
 **To encrypt a medivac file**
 
-`./medivac -d [file] [path dir]` i.e: `./medivac -d medfile.medivac ./out/`
+`medivac -d medivac_file [output_directory]`
 
 Scrypt output :
 
