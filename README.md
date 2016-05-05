@@ -13,7 +13,7 @@ Medivac is the name of the utility created to meet the criteria of the labo. It 
 
 Scrypt output :
 
-```shell
+```
 ./medivac file1.txt file2.txt
   __  __          _ _                 
  |  \/  |        | (_)                
