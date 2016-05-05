@@ -79,6 +79,9 @@ def encrypt ( args ) :
     # TODO encrypt the file
     # ...
     
+    # TODO store the creation date on the file
+    # TODO make a HMAC after encryption
+    
     with open( MED_FILENAME, 'wb' ) as f :
       f.write( ba )
       f.close()
@@ -131,6 +134,8 @@ def decrypt ( args ) :
 
       print ( ba )
 
+      # TODO check HMAC and filename
+      # TODO check creation/modification date
       # TODO decrypt bytes
       # ...
       
