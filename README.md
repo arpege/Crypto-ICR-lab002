@@ -37,7 +37,7 @@ Scrypt output :
 
   Start encryption...
 
-bytearray(b"PK\x03\x04\x14\x00\x00\x00\x00\x00\xa6v\xa5H\x16\xe5\'|\x0f\x00\x00\x00\x0f\x00\x00\x00\t\x00\x00\x00file1.txtsercet med filePK\x03\x04\x14\x00\x00\x00\x00\x00\xa6v\xa5H\x94P/\x80\x16\x00\x00\x00\x16\x00\x00\x00\t\x00\x00\x00file2.txtsecond secret med filePK\x01\x02\x14\x03\x14\x00\x00\x00\x00\x00\xa6v\xa5H\x16\xe5\'|\x0f\x00\x00\x00\x0f\x00\x00\x00\t\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xa4\x81\x00\x00\x00\x00file1.txtPK\x01\x02\x14\x03\x14\x00\x00\x00\x00\x00\xa6v\xa5H\x94P/\x80\x16\x00\x00\x00\x16\x00\x00\x00\t\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xa4\x816\x00\x00\x00file2.txtPK\x05\x06\x00\x00\x00\x00\x02\x00\x02\x00n\x00\x00\x00s\x00\x00\x00\x00\x00")
+bytearray(b"PK\x03\x04\x14\x00\x00\x00\x00\x00\xa6v...\x00")
 
   Removing temp files...
 
@@ -45,6 +45,44 @@ bytearray(b"PK\x03\x04\x14\x00\x00\x00\x00\x00\xa6v\xa5H\x16\xe5\'|\x0f\x00\x00\
 
    ----------------------------------------
   | Medivac encryption finish with success |
+   ----------------------------------------
+  
+
+```
+
+
+**To encrypt a medivac file**
+
+`./medivac -d [file] [path dir]` i.e: `./medivac -d medfile.medivac ./out/`
+
+Scrypt output :
+
+```
+./medivac -d medfile.medivac ./out/
+  __  __          _ _                 
+ |  \/  |        | (_)                
+ | \  / | ___  __| |___   ____ _  ___ 
+ | |\/| |/ _ \/ _` | \ \ / / _` |/ __|
+ | |  | |  __/ (_| | |\ V / (_| | (__ 
+ |_|  |_|\___|\__,_|_| \_/ \__,_|\___|
+  ___                       _   
+ |   \ ___ __ _ _ _  _ _ __| |_ 
+ | |) / -_) _| '_| || | '_ \  _|
+ |___/\___\__|_|  \_, | .__/\__|
+                  |__/|_|       
+                  
+                  
+  Reading file medfile.medivac
+  Output result in ./out/
+
+bytearray(b"PK\x03\x04...\x00")
+
+  Removing temp files...
+
+   * medfile.zip removed
+
+   ----------------------------------------
+  | Medivac decryption finish with success |
    ----------------------------------------
   
 
