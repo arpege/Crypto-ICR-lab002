@@ -1,18 +1,65 @@
 #!/usr/bin/env python3
 
+import sys
+import os
+import zipfile
+import MedivacHeaders
+
+ZIP_FILENAME = 'medfile.zip'
+
 # Can encrypt and decrypt
 
-def encrypt () :
-  print ( 'hello encrypt!' );
+def encrypt ( args ) :
+  MedivacHeaders.printHeadCrypt()
+  
+  if os.path.isfile( ZIP_FILENAME ) :
+    print ( '  ' + ZIP_FILENAME + ' already exist!' )
+    print ( '  Removing file ' + ZIP_FILENAME )
+    os.remove( ZIP_FILENAME )
+  
+  print ( """
+  Start compresion...
+  """ )
+  with zipfile.ZipFile(ZIP_FILENAME, 'x') as myzip :
+    for medFile in args:
+      print ( '   * Adding ' + str ( medFile)  )
+      myzip.write( str ( medFile) )
+    myzip.close()
+  print ( """
+  
+  Start encryption...
+  """ )
+  
+  # TODO encrypt the file
+  # ...
+  
+  print ( """
+  Removing temp files...
+  """ )
+  if os.path.isfile( ZIP_FILENAME ) :
+    os.remove( ZIP_FILENAME )
+    print ( '   * ' + ZIP_FILENAME + ' removed' )
+  
+  print ( """
+   ----------------------------------------
+  | Medivac encryption finish with success |
+   ----------------------------------------
+  """ )
 
-def decrypt () :
-  print ( 'hello decrpyt!' );
-
+def decrypt ( args ) :
+  MedivacHeaders.printHeadDecrypt()
+  print ( str(args) )
 
 def main () :
-  print ( 'Hello world!' );
-
+  
+  if sys.argv[1] == '-d' :
+    decrypt (sys.argv[2:])
+  else :
+    encrypt (sys.argv[1:])
+  
   
 if __name__ == '__main__' :
-  main();
+  
+  MedivacHeaders.printHead()
+  main()
   
