@@ -2,6 +2,13 @@
 
 Create an utility that could create and read medical's containers for sensible informations. The containers are scheduled for archiving. They should not pass sensitive information without the encryption keys.
 
+## Requirements
+
+1. We must be able to detect that the archive was changed after generation
+2. We must guarantee its integrity
+3. We must guarantee its provenance
+4. The meta data should not help to retrieve sensitive information
+
 ## Medivac
 
 Medivac is the name of the utility created to meet the criteria of the labo. It is a scrypt python that encapsulates several sensitive files in a single encrypted container.
@@ -87,3 +94,7 @@ bytearray(b"PK\x03\x04...\x00")
   
 
 ```
+
+### Installation
+
+To test it on a UNIX environment you can execute `make install`. It will effectively copy the executable in the folder `/usr/local/bin`.
