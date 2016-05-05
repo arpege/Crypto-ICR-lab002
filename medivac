@@ -3,13 +3,23 @@
 import sys
 import os
 import zipfile
+import zlib
 import MedivacHeaders
 
+
+# temp filename for compression
 ZIP_FILENAME = 'medfile.zip'
 
-# Can encrypt and decrypt
+# result filename can't be choose
+MED_FILENAME = 'medfile.medivac'
 
+# Encrypt function
+# args contains an array of file name
+# that will be compressed with zipfile
+# The zipfile result is crypted and 
+# save in medfile.medivac
 def encrypt ( args ) :
+  
   MedivacHeaders.printHeadCrypt()
   
   if os.path.isfile( ZIP_FILENAME ) :
@@ -17,25 +27,32 @@ def encrypt ( args ) :
     print ( '  Removing file ' + ZIP_FILENAME )
     os.remove( ZIP_FILENAME )
   
-  print ( """
-  Start compresion...
-  """ )
+  print ( """\n  Start compresion...\n""" )
   with zipfile.ZipFile(ZIP_FILENAME, 'x') as myzip :
     for medFile in args:
-      print ( '   * Adding ' + str ( medFile)  )
-      myzip.write( str ( medFile) )
+      if os.path.isfile( medFile ) :
+        print ( '   * Adding ' + str ( medFile)  )
+        myzip.write( str ( medFile) )
     myzip.close()
-  print ( """
+  print ( """\n\n  Start encryption...\n""" )
   
-  Start encryption...
-  """ )
+  fh = open( ZIP_FILENAME, 'rb' )
+  try :
+    ba = bytearray( fh.read() )
+    
+    print ( ba )
+    
+    # TODO encrypt the file
+    # ...
+    
+    with open( MED_FILENAME, 'wb' ) as f :
+      f.write( ba )
+      f.close()
+    
+  finally :
+    fh.close()
   
-  # TODO encrypt the file
-  # ...
-  
-  print ( """
-  Removing temp files...
-  """ )
+  print ( """\n  Removing temp files...\n""" )
   if os.path.isfile( ZIP_FILENAME ) :
     os.remove( ZIP_FILENAME )
     print ( '   * ' + ZIP_FILENAME + ' removed' )
@@ -45,11 +62,72 @@ def encrypt ( args ) :
   | Medivac encryption finish with success |
    ----------------------------------------
   """ )
-
+  
+  
+# Decrypt function
+# Try to decrypt the file
 def decrypt ( args ) :
+  
   MedivacHeaders.printHeadDecrypt()
-  print ( str(args) )
+  
+  # print ( len( args ) )
+  # print ( str( args ) )
+  
+  if len( args ) < 1 or len( args ) > 2 :
+    print ( """  > Number of args incorect, exit decryption proccess\n""" )
+    sys.exit( 0 )
+  
+  medfile = str( args[0] )
+  
+  try:
+    output = str( args[1] )
+  except IndexError:
+    output = '.'
+  
+  if ( os.path.isfile( medfile ) ) and ( os.path.isdir( output ) ) :
+    print ( '  Reading file ' + medfile )
+    print ( '  Output result in ' + output + '\n' )
+    
+    fh = open( medfile, 'rb' )
+    try :
+      ba = bytearray( fh.read() )
 
+      print ( ba )
+
+      # TODO decrypt bytes
+      # ...
+      
+      if os.path.isfile( ZIP_FILENAME ) :
+        print ( '  ' + ZIP_FILENAME + ' already exist!' )
+        print ( '  Removing file ' + ZIP_FILENAME )
+        os.remove( ZIP_FILENAME )
+    
+      with open( ZIP_FILENAME, 'wb' ) as f :
+        f.write( ba )
+        f.close()
+      
+      with zipfile.ZipFile( ZIP_FILENAME ) as myzip:
+        myzip.extractall( output )
+      
+      print ( """\n  Removing temp files...\n""" )
+      os.remove( ZIP_FILENAME )
+      print ( '   * ' + ZIP_FILENAME + ' removed' )
+
+    finally :
+      fh.close()
+    
+  else :
+    print ( """  > File not exist, exit decryption proccess\n""" ) 
+    sys.exit( 0 )
+  
+  print ( """
+   ----------------------------------------
+  | Medivac decryption finish with success |
+   ----------------------------------------
+  """ )
+
+# Main function
+# Test sys args and call the correct function
 def main () :
   
   if sys.argv[1] == '-d' :
