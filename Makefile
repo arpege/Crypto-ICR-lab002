@@ -1,10 +1,10 @@
 all: e
 
 e: 
-	./medivac file1.txt file2.txt
+	./medivac ~/.ssh/private.pem file1.txt file2.txt
 
 d:
-	./medivac -d medfile.medivac ./out/
+	./medivac -d ~/.ssh/private.pem medfile.medivac ./out/
 
 install:
 	rm -f /usr/local/bin/medivac

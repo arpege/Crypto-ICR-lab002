@@ -3,6 +3,11 @@
 import sys
 import os
 import zipfile
+import Crypto
+
+from Crypto.Hash import SHA256
+from Crypto.Cipher import AES
+from Crypto.PublicKey import RSA
 
 # temp filename for compression
 ZIP_FILENAME = 'medfile.zip'
@@ -52,9 +57,15 @@ def printMan () :
 # that will be compressed with zipfile
 # The zipfile result is crypted and 
 # save in medfile.medivac
-def encrypt ( args ) :
+def encrypt ( private_key, args ) :
   
   printHeadCrypt()
+  
+  key = None
+  if os.path.isfile( private_key ) :
+    f = open( private_key, 'r' )
+    key = RSA.importKey( f.read() )
+    f.close()
   
   if os.path.isfile( ZIP_FILENAME ) :
     print ( '  ' + ZIP_FILENAME + ' already exist!' )
@@ -72,9 +83,27 @@ def encrypt ( args ) :
   
   fh = open( ZIP_FILENAME, 'rb' )
   try :
-    ba = bytearray( fh.read() )
+    #ba = bytearray( fh.read() )
+    plaintext = fh.read()
+    print ( plaintext )
     
-    print ( ba )
+    publickey = key.publickey()
+    
+    encrypted = publickey.encrypt(plaintext, 32)[0]
+    print (encrypted)
+    
+    print ( """\n\n  Finish encryption...\n""" )
+    
+    #print ( key.exportKey() )
+    #print ( publickey.exportKey() )
+    
+    #iv = os.urandom(16)
+    #print (iv)
+    
+    #obj = AES.new('This is a key123', AES.MODE_CBC, iv )
+    #ciphertext = obj.encrypt( '0123456789abcdef' )
+    
+    #print ( ciphertext ) 
     
     # TODO encrypt the file
     # ...
@@ -83,7 +112,7 @@ def encrypt ( args ) :
     # TODO make a HMAC after encryption
     
     with open( MED_FILENAME, 'wb' ) as f :
-      f.write( ba )
+      f.write( encrypted )
       f.close()
     
   finally :
@@ -107,9 +136,16 @@ def encrypt ( args ) :
 # Create the zip temp file and unzip it
 # Output the result in args[1] if
 # args[1] is a directory, else in '.'
-def decrypt ( args ) :
+def decrypt ( private_key, args ) :
   
   printHeadDecrypt()
+  
+  key = None
+  if os.path.isfile( private_key ) :
+    f = open( private_key, 'r' )
+    key = RSA.importKey( f.read() )
+    f.close()
+  
   
   if len( args ) < 1 or len( args ) > 2 :
     print ( """  > Number of args incorect, exit decryption proccess\n""" )
@@ -130,10 +166,13 @@ def decrypt ( args ) :
     
     fh = open( medfile, 'rb' )
     try :
-      ba = bytearray( fh.read() )
+      b = fh.read()
 
-      print ( ba )
-
+      print ( b )
+      
+      plaintext = key.decrypt( b )
+      print ( plaintext ) 
+      
       # TODO check HMAC and filename
       # TODO check creation/modification date
       # TODO decrypt bytes
@@ -145,7 +184,7 @@ def decrypt ( args ) :
         os.remove( ZIP_FILENAME )
     
       with open( ZIP_FILENAME, 'wb' ) as f :
-        f.write( ba )
+        f.write( plaintext )
         f.close()
       
       with zipfile.ZipFile( ZIP_FILENAME ) as medzip:
@@ -178,9 +217,9 @@ def main () :
     printMan()
   else :
     if sys.argv[1] == '-d' :
-      decrypt (sys.argv[2:])
+      decrypt ( sys.argv[2], sys.argv[3:] )
     else :
-      encrypt (sys.argv[1:])
+      encrypt ( sys.argv[1], sys.argv[2:] )
   
   
 if __name__ == '__main__' :
