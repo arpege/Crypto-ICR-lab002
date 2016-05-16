@@ -26,25 +26,27 @@ If you run `medivac [-h] [--help]` an help will be display. It's look like this:
  | |  | |  __/ (_| | |\ V / (_| | (__ 
  |_|  |_|\___|\__,_|_| \_/ \__,_|\___|
 
-  Medivac version 1.0
-  Author: Joel Gugger <joel.gugger@master.hes-so.ch>
+  Medivac version 1.1
+  author: Joel Gugger <joel.gugger@master.hes-so.ch>
   
-  Usage:  medivac source_file ...
-          medivac -d medivac_file [output_directory]
-  
+  usage:  medivac pem_key_path source_file ...
+          medivac -d pem_key_path medivac_file [output_directory]
+          
+  default output_directory is '.'
+   
 ```
 
 
 **To encrypt several files**
 
-`medivac source_file ...`
+`medivac pem_key_path source_file ...`
 
 It's possible to gives one or more files. All the files are zip before encryption. The result will be store in a .medivac file. This file can never be change at all. If this is the case, it will become impossible to read.
 
 Scrypt output :
 
 ```
-./medivac file1.txt file2.txt
+./medivac.py ~/.ssh/private.pem file1.txt file2.txt
   __  __          _ _                 
  |  \/  |        | (_)                
  | \  / | ___  __| |___   ____ _  ___ 
@@ -65,9 +67,13 @@ Scrypt output :
    * Adding file2.txt
 
 
-  Start encryption...
+  Start encryption:
 
-bytearray(b"PK\x03\x04\x14\x00\x00\x00\x00\x00\xa6v...\x00")
+  - Generating key...
+  - Encrypt...
+  - Signing...
+  - Saving file...
+
 
   Removing temp files...
 
@@ -76,18 +82,18 @@ bytearray(b"PK\x03\x04\x14\x00\x00\x00\x00\x00\xa6v...\x00")
    ----------------------------------------
   | Medivac encryption finish with success |
    ----------------------------------------
-  
+    
 ```
 
 
 **To encrypt a medivac file**
 
-`medivac -d medivac_file [output_directory]`
+`medivac -d pem_key_path medivac_file [output_directory]`
 
 Scrypt output :
 
 ```
-./medivac -d medfile.medivac ./out/
+./medivac.py -d ~/.ssh/private.pem medfile.medivac ./out/
   __  __          _ _                 
  |  \/  |        | (_)                
  | \  / | ___  __| |___   ____ _  ___ 
@@ -104,7 +110,13 @@ Scrypt output :
   Reading file medfile.medivac
   Output result in ./out/
 
-bytearray(b"PK\x03\x04...\x00")
+  Start decryption:
+
+  - Check signature...
+  - Retreive key...
+  - Decrypt file(s)...
+  - Saving file...
+
 
   Removing temp files...
 
