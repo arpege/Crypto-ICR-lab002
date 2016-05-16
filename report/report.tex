@@ -1,0 +1,534 @@
+\documentclass[a4paper]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+\usepackage{minted}
+\usepackage{listings}
+\usepackage{hyperref}
+
+\lstset{
+    literate={~} {$\sim$}{1}
+}
+
+\usepackage{titling}
+\newcommand{\subtitle}[1]{
+  \posttitle{
+    \par\end{center}
+    \begin{center}\large#1\end{center}
+    \vskip0.5em}
+}
+
+
+\title{ICR - Practical Work \#2}
+\subtitle{Designing and Implementing a Secure Container for Medical Data}
+
+\author{Gugger Joël \thanks{\ joel.gugger@master.hes-so.ch}}
+\date{\today}
+
+
+\begin{document} 
+\maketitle
+
+
+\abstract{A university hospital has mandated you to design and implement a secure archival software system for documents containing medical data. Legal regulations require that those data are kept in a highly secure way. In the following, we will focus on confidentiality, authenticity and integrity of the archived data, and we will assume that their availability is handled by separate mechanisms.
+In order to simplify the scenario, a further assumption that can be taken is that these documents containing sensitive medical data are stored in flat (binary) files, that can however have an arbitrary bytes length. Furthermore, one can assume that the unprotected files have been compressed.
+To implement this secure archival system, you can freely select the cryptographic library (e.g., Botan, OpenSSL, PolarSSL, etc.) and use either the C, C++, Java or Python programming language.}
+
+\tableofcontents
+
+ 
+\chapter{Security Requirements}
+\section{Questions}
+\subsection{What is the overall security level that you are targeting?}
+Le but de ce container est de permettre l'archivage des données. Le context d'utilisation de l'utilitaire serait sur un serveur de confiance de l'université médicale ou se trouve une clé privée.
+
+Cette clé est utilisée pour chiffrer une partie du contenu et signer les containers. Il peut être envisagé d'utiliser plusieurs paire de clés pour différents service d'archive. Si cette clé fuite, le système est compromis. Si le serveur sur lequel les containers sont créés n'est de confiance, le système est compromis.
+
+Les exigences définies sont de :
+
+\begin{enumerate}
+    \item{pouvoir detecter si l'archive a été alterée après génération (intégrité des données)}
+    \item{pouvoir garantir la provenance du container (autheticité)}
+    \item{ne pas être capable de savoir combien de fichiers sont archivés}
+    \item{ne pas savoir le nom des fichiers archivés}
+\end{enumerate}
+
+\subsection{How can you ensure that the stored data will be kept in a confidential way? What about the file metadata?}
+Pour être sur d'obtenir une confidentialité élevée, un les métadonnées sont chiffrées avec le contenu. Pour y arriver, tout les fichiers devant être archivés sont compresser pour obtenir un seul gros fichier, contenant les entêtes et les contenus.
+
+Le format d'archive zip est utilisé. Malheureusement je me suis rendu compte trop tardivement que celui-ci ne conservait pas les permissions sur les fichiers ainsi que les dates de création/modification. Une amélioration nécessaire à apporter serait d'utiliser le format d'archive tar, qui elle conserve ces métadonnées de fichiers.
+
+Une fois compresser, le contenu de l'archive et chiffré symétriquement avec AES256 en mode CBC avec un vecteur d'initialisation de 128 bits. Cette méthode permet de cacher toutes les métadonnées sauf celle de la taille globale des fichiers. On ne peut pas savoir combien de fichiers sont stocker dans le container, donc on ne peut pas retrouver la taille de chaque fichier. Cependant le poids global peut donner une première indication sur le type de fichiers archivés.
+
+Cette méthode de chiffrement symétrique permet de chiffrer un grand nombre de données, et convient donc pour les gros volume de fichiers. Les données sont confidentiel car il est nécessaire d'avoir la clé privée du serveur pour déchiffrer la clé utilisée pour le chiffrement AES256. 
+
+\subsection{How can you ensure that the stored data are authentic? What is the risk addressed?}
+L'authenticité des données est garantie grâce à une signature effectuée à la fin du processus. Cette signature est faite grâce à la clé privée du serveur, permettant l'authentification de l'émetteur du container. La signature est basée sur du SHA256.
+
+Le principal risque est la perte de la clé privée ou son vol. Dans le premier cas il ne serait plus possible de vérifier la provenance des container, ni même de les relire. Dans le deuxième cas, il ne serait plus possible de garantir la provenance des containers. Il serait alors possible pour l'attaquant de créer de fausse données médicales et de les archivées.
+
+\subsection{How can you ensure that the stored data keep their integrity?}
+L'intégrité des données est vérifiée en premier lieu lors de la lecture d'un container. Celle-ci se fait grâce à la signature imposée sur tout le container. Le principe utilisé est celui de \textit{encrypt-then-mac}.
+
+\subsection{What are the cryptographic keys required to be managed in your system?}
+La seul exigence du système est une clé privée sous format .PEM stockée directement sur le serveur utilisé pour générer les containers. Cette clé privée ne doit pas contenir de mot de passe. La clé et le vecteur d'initialisation de chaque container est générée par le système.
+
+\newpage
+\section{Data format of a secure container}
+Le format d'un container contient quatre informations distinctes : le vecteur d'initialisation, la clé symétrique chiffrée, le ciphertext et la signature. Les quatre éléments sont placés de la manière suivante (l'opérateur | fait office de concaténation) :
+
+\begin{center}
+$IV|K|C...C|M$
+\end{center}
+
+Le vecteur d'initialisation, la clé de chiffrement symétrique et la signature ont les longueurs définie comme tel :
+
+\begin{center}
+\begin{tabular}{|l|r|}
+    \hline
+    Element & longueur (bytes) \\
+    \hline
+    $IV$ & 16\\
+    $Key$ & 256\\
+    $Mac$ & 256\\
+    \hline
+\end{tabular}
+\end{center}
+
+La longueur de la clé est celle une fois chiffrée par la clé public donnée en paramètre à l'utilitaire. La clé de celle-ci non-chiffrée est évidemment de 256 bits (AES256).
+
+Le ciphertext $C...C$ contient toutes les informations des fichiers du container. Il représente le contenu binaire des fichiers sous format d'archive zip avec un padding de type \textit{PKCS7} pour correspondre au critère de chiffrement de l'AES256 en mode CBC.
+
+Pour retrouver le contenu de l'archive, les étapes suivantes sont effectuées :
+
+\begin{enumerate}
+    \item{Récupération de la clé privée asymétrique}
+    \item{Vérification de la signature sur $IV|K|C...C$}
+    \item{Si celle-ci est valide, déchiffrement de la clé symétrique}
+    \item{Récupération du vecteur d'initialisation}
+    \item{Déchiffrement du ciphertext avec la clé symétrique et l'$IV$}
+    \item{Suppression du padding \textit{PKCS7}}
+    \item{Reconstitution de l'archive et desarchivage dans le dossier cible}
+\end{enumerate}
+
+Le processus de génération du container est similaire, dans le sens inverse. A cela s'ajoute la génération aléatoire du vecteur et de la clé via le device \textit{urandom} des systèmes UNIX-like. Le processus est le suivant :
+
+\begin{enumerate}
+    \item{Génération de l'archive zip}
+    \item{Récupération de la clé privée asymétrique}
+    \item{Génération du vecteur $IV$ et de la clé $K$}
+    \item{Padding du binaire de l'archive avec \textit{PKCS7}}
+    \item{Chiffrement du binaire de l'archive}
+    \item{Chiffrement de la clé symétrique avec la clé public}
+    \item{Signature sur $IV|K|C...C$ avec la clé privée}
+    \item{Sauvegarde du binaire concaténé dans le fichier \textit{.medivac}}
+\end{enumerate}
+
+\chapter{Implementation and Tests}
+L'implémentation a été faite en Python sous le nom de \textbf{Medivac}. Medivac est un utilitaire en ligne de commande permettant de chiffrer et déchiffrer des containers. Pour créer un container avec $N$ fichiers :
+
+\begin{lstlisting}[language=bash]
+medivac ~/.ssh/private_key.pem file1.txt file2.txt
+\end{lstlisting}
+
+Le premier argument doit être le chemin vers une clé privée RSA au format PEM. Cette clé permet le chiffrement de la clé symétrique et la signature du container. Les arguments suivant sont un liste de fichiers à inclure dans le container. 
+
+Pour déchiffrer un container, le premier argument doit être égal à \lstinline[language=bash]{-d}, le second doit être le chemin vers la clé RSA utilisée pour créer le container, troisième argument doit être le chemin vers le fichier .medivac et le dernier, optionnel, le dossier de sortie :
+
+\begin{lstlisting}[language=bash]
+medivac -d ~/.ssh/private.pem medfile.medivac ./out/
+\end{lstlisting}
+
+Le dossier de sortie par défaut et le dossier courant.
+
+\section{Encryption implementation}
+La première étape de processus de chiffrement permet de récupérer la clé privée au format PEM.
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+linenos,
+firstnumber=67
+]
+{python}
+  key = None
+  if os.path.isfile( private_key ) :
+    with open( private_key, "rb" ) as key_file:
+      private_key = serialization.load_pem_private_key(
+        key_file.read(),
+        password=None,
+        backend=default_backend()
+      )
+\end{minted}
+
+Si le fichier zip temporaire est déjà présent, il est supprimé. Ce cas ne devrais pas arrivé car les fichiers temporaires sont systématiquement supprimés lors de la création des containers.
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+linenos,
+firstnumber=76
+]
+{python}
+  if os.path.isfile( ZIP_FILENAME ) :
+    print ( '  ' + ZIP_FILENAME + ' already exist!' )
+    print ( '  Removing file ' + ZIP_FILENAME )
+    os.remove( ZIP_FILENAME )
+  
+  print ( """\n  Start compresion...\n""" )
+  with zipfile.ZipFile(ZIP_FILENAME, 'x') as medzip :
+    for medFile in args:
+      if os.path.isfile( medFile ) :
+        print ( '   * Adding ' + str ( medFile)  )
+        medzip.write( str ( medFile) )
+    medzip.close()
+  print ( """\n\n  Start encryption:\n""" )
+  \end{minted}
+
+Une fois l'archive temporaire créée, on récupère son contenu pour le chiffrer. L'archive créée doit être impérativement supprimée à la fin du processus.
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+linenos,
+firstnumber=90
+]
+{python}
+  fh = open( ZIP_FILENAME, 'rb' )
+  try :
+    plaintext = fh.read()
+\end{minted}
+
+On récupère la clé publique asymétrique, on pad le contenu binaire de l'archive et on génère aléatoirement la clé symétrique et le vecteur d'initialisation.
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+linenos,
+firstnumber=94
+]
+{python}
+    public_key = private_key.public_key()
+
+    padder = padding.PKCS7(128).padder()
+    padded_plaintext = padder.update( plaintext )
+    padded_plaintext += padder.finalize()
+    
+    print ( """  - Generating key...""" )
+    key = os.urandom( 32 )    # 256 bits
+    iv = os.urandom( 16 )     # 128 bits
+\end{minted}
+
+Une fois le binaire paddé avec \textit{PKCS7} et les clés générées, on peut chiffrer l'archive avec de l'\textit{AES256} en mode \textit{CBC}. La clé symétrique est ensuite chiffrée à sont tour par la clé publique pour être stockée dans le container.
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+linenos,
+firstnumber=104,
+breaklines=true
+]
+{python}
+    print ( """  - Encrypt...""" )
+    cipher = Cipher( 
+      algorithms.AES( key ), 
+      modes.CBC( iv ), 
+      backend=backend 
+    )
+    encryptor = cipher.encryptor()
+    ciphertext = encryptor.update( padded_plaintext ) + encryptor.finalize()
+    
+    encrypted_key = public_key.encrypt(
+      key,
+      cryptography.hazmat.primitives.asymmetric.padding.OAEP(
+        mgf=... .primitives.asymmetric.padding.MGF1( 
+          algorithm=hashes.SHA1() 
+        ),
+        algorithm=hashes.SHA1(),
+        label=None
+      )
+    )
+\end{minted}
+
+L'$IV$, la clé symétrique et le ciphertext sont concaténé et ensuite signé par la clé privée pour garantir l'intégrité et l'authenticité du container. La clé est concaténée à son tour pour donner le binaire final.
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+linenos,
+firstnumber=124,
+breaklines=true
+]
+{python}
+    print ( """  - Signing...""" )
+    for_signature = iv + encrypted_key + ciphertext
+    
+    signer = private_key.signer(
+      cryptography.hazmat.primitives.asymmetric.padding.PSS(
+        mgf=... .primitives.asymmetric.padding.MGF1( hashes.SHA256() ),
+        salt_length=... .asymmetric.padding.PSS.MAX_LENGTH
+      ),
+      hashes.SHA256()
+    )
+    signer.update( for_signature )
+    signature = signer.finalize()
+    
+    medivac = for_signature + signature
+\end{minted}
+
+Le binaire final est ensuite sauvegardé dans le fichier medfile.medivac. L'archive temporaire est ensuite supprimée.
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+linenos,
+firstnumber=139,
+breaklines=true
+]
+{python}
+    print ( """  - Saving file...\n""" )
+    with open( MED_FILENAME, 'wb' ) as f :
+      f.write( medivac )
+      f.close()
+      
+  finally :
+    fh.close()
+  
+  print ( """\n  Removing temp files...\n""" )
+  if os.path.isfile( ZIP_FILENAME ) :
+    os.remove( ZIP_FILENAME )
+    print ( '   * ' + ZIP_FILENAME + ' removed' )
+  
+\end{minted}
+
+\section{Decryption implementation}
+La première étape de l'implémentation du processus de déchiffrement est de récupérer la clé privée au format PEM ainsi que de vérifier les paramètres d'entrées.
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+linenos,
+firstnumber=169,
+breaklines=true
+]
+{python}
+  backend = default_backend()
+  key = None
+  if os.path.isfile( private_key ) :
+    with open( private_key, "rb" ) as key_file:
+      private_key = serialization.load_pem_private_key(
+        key_file.read(),
+        password=None,
+        backend=default_backend()
+      )
+  
+  if len( args ) < 1 or len( args ) > 2 :
+    print ( """  > Number of args incorect, exit ... \n""" )
+    sys.exit( 0 )
+  
+  medfile = str( args[0] )
+  
+  try:
+    output = str( args[1] )
+    if not os.path.isdir( output ) :
+      output = '.'
+  except IndexError:
+    output = '.'
+\end{minted}
+
+Le contenu binaire du fichier medivac passé en paramètre est récupéré après avoir testé sont existance.
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+linenos,
+firstnumber=192,
+breaklines=true
+]
+{python}
+  if ( os.path.isfile( medfile ) ) :
+    print ( '  Reading file ' + medfile )
+    print ( '  Output result in ' + output + '\n' )
+    
+    print ( """  Start decryption:\n""" )
+    fh = open( medfile, 'rb' )
+    try :
+      b = fh.read()
+\end{minted}
+
+Le binaire récupéré est découpé en deux blocs afin de récupérer le contenu et la signature. Celle-ci est vérifiée grâce à la clé passée en argument lors de l'appel de l'utilitaire.
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+linenos,
+firstnumber=201,
+breaklines=true
+]
+{python}
+      for_signature = b[:-256]
+      signature = b[-256:]
+      
+      print ( """  - Check signature...""" )
+      public_key = private_key.public_key()
+      verifier = public_key.verifier(
+        signature,
+        cryptography.hazmat.primitives.asymmetric.padding.PSS(
+          mgf=... .asymmetric.padding.MGF1( 
+            hashes.SHA256() 
+          ),
+          salt_length=... .padding.PSS.MAX_LENGTH
+        ),
+        hashes.SHA256()
+      )
+      verifier.update( for_signature )
+      try :
+        verifier.verify()
+      except cryptography.exceptions.InvalidSignature :
+        error_then_quit()
+\end{minted}
+
+Si la clé est vérifiée, on récupère le vecteur d'initialisation, la clé symétrique chiffrée et le ciphertext. La clé est ensuite déchiffrée par la clé privée.
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+linenos,
+firstnumber=222,
+breaklines=true
+]
+{python}
+      iv = for_signature[:16]
+      encrypted_key = for_signature[16:272]
+      ciphertext = for_signature[272:]
+      
+      print ( """  - Retreive key...""" )
+      key = private_key.decrypt(
+        encrypted_key,
+        cryptography.hazmat.primitives.asymmetric.padding.OAEP(
+          mgf=... .primitives.asymmetric.padding.MGF1(
+            algorithm=hashes.SHA1()
+          ),
+          algorithm=hashes.SHA1(),
+          label=None
+        )
+      )
+\end{minted}
+
+On récupère le plaintext grâce à l'$IV$ et à la clé, puis on enlève le padding \textit{PKCS7}.
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+linenos,
+firstnumber=238,
+breaklines=true
+]
+{python}
+      print ( """  - Decrypt file(s)...""" )
+      cipher = Cipher(
+        algorithms.AES( key ), 
+        modes.CBC( iv ), 
+        backend=backend
+      )
+      decryptor = cipher.decryptor()
+      padded_plaintext = decryptor.update( ciphertext ) + decryptor.finalize()
+      
+      unpadder = padding.PKCS7(128).unpadder()
+      plaintext = unpadder.update( padded_plaintext )
+      plaintext += unpadder.finalize()
+\end{minted}
+
+On fini par recréer l'archive et desarchiver son contenu dans le dossier spécifié. On supprime le fichier temporaire de l'archive avant de quitter.
+
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+linenos,
+firstnumber=251,
+breaklines=true
+]
+{python}
+      print ( """  - Saving file...\n""" )
+      if os.path.isfile( ZIP_FILENAME ) :
+        print ( '  ' + ZIP_FILENAME + ' already exist!' )
+        print ( '  Removing file ' + ZIP_FILENAME )
+        os.remove( ZIP_FILENAME )
+    
+      with open( ZIP_FILENAME, 'wb' ) as f :
+        f.write( plaintext )
+        f.close()
+      
+      with zipfile.ZipFile( ZIP_FILENAME ) as medzip:
+        if medzip.testzip() == None :
+          medzip.extractall( output )
+        medzip.close()
+      
+      print ( """\n  Removing temp files...\n""" )
+      os.remove( ZIP_FILENAME )
+      print ( '   * ' + ZIP_FILENAME + ' removed' )
+\end{minted}
+
+\section{Questions}
+\subsection{What are the critical parts in your code in terms of security?}
+Je vois trois points majeurs dans cette implémentation :
+
+Premier point critique, celui de la masse de données à chiffrer. Le but étant de faire de l'archivage il doit donc être possible de chiffrer des To de données sans avoir de fuite d'informations.
+
+Second point critique, celui des fichiers temporaires. Si les fichiers intermédiaires ne sont pas supprimés correctement il est facile de récupérer toutes les données.
+
+Troisième point, celui des algorithmes. Les algorithmes de chiffrement doivent être choisi de manière à être le plus efficace et sûre.
+
+\subsection{How did you ensure that these critical parts are properly implemented?}
+Le point faible de la quantité de données à chiffrer se trouve plus précisément dans dans la clé symétrique chiffrée $K$ du container. Les bytes 17 à 273 sont ceux de la clé symétrique utilisée pour le container.
+
+\begin{center}
+$IV|K|C...C|M$
+\end{center}
+
+Ces bytes peuvent être lu par n'importe quel personne ayant accès au serveur. Pour tout les containers, cette clé symétrique est chiffrée avec la clé privée RSA. Si la même clé RSA est utilisée pour chiffrer des milliers de containers, il peut y avoir des fuites.
+
+Cependant l'implémentation permet une certaine souplesse concernant cette clé. Si à l'usage plusieurs clés sont utilisées, sur plusieurs serveur par exemple, cela répartit le nombre de chiffrement de chacune d'elles. On évite ainsi les fuites.
+
+L'$IV$ n'est pas un nonce, cependant vu que la clé symétrique $K$ et le vecteur $IV$ sont tiré aléatoirement, il est peut probable que la combinaison de ceux-ci soit tiré deux fois ou plus. Ce qui règle le problème.
+
+Les fichiers temporaires sont effacé, cependant il reste des failles de sécurité expliquées dans la question suivante.
+
+Les algorithmes ont été choisi selon leurs caractéristiques première. Une paire de clés privée et publique pour l'intégrité et l'authenticité. Les paramètre de signature utilise un HMAC SHA256 et le padding se fait avec PKCS7. Le chiffrement de l'archive se fait grâce à une clé de 256 bits en AES mode CBC avec un vecteur de 128 bits. La politique de signature est encrypt-then-mac, ce qui permet de vérifier avant toute chose que le container n'a pas été altéré et provient bien du service d'archivage.
+
+\subsection{What are the remaining weak points in your implementation?}
+Les fichiers temporaires sont supprimés via un librairie Python. Le fichier à de grande chance de ne pas être correctement éffacé sur le disque. Celui-ci ayant toujours le même nom, cela comprend un risque. L'implémentation actuelle ne prend pas en compte cette faille.
+
+Les containers peuvent être renommés et déplacé sur le serveur. Ce qui peut engendrer des fuites au niveau des métadonnées. L'utilitaire devrait vérifier la date de modification du container et figé son emplacement au moment de la création.
+
+\subsection{How do you propose to address the remaining weak points?}
+Avant suppression des fichiers temporaire, il serait nécessaire de réécrire dans le fichier des byte à \textbackslash x00 pour effacer toute trace de l'archive.
+
+La date de création/modification du container et son emplacement pourrait être rajoutée aux données signées. Ce qui permettrait la vérification que le container n'a pas été déplacé ou modifié.
+
+
+\newpage
+
+\begin{abstract}
+\begin{center}
+The sources of the project are available on GitHub at the following address: \\
+\href{https://github.com/GuggerJoel/Crypto-ICR-lab002}{https://github.com/GuggerJoel/Crypto-ICR-lab002}
+\end{center}
+\end{abstract}
+
+
+\end{document}

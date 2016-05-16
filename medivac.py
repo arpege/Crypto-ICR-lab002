@@ -102,14 +102,20 @@ def encrypt ( private_key, args ) :
     iv = os.urandom( 16 )     # 128 bits
     
     print ( """  - Encrypt...""" )
-    cipher = Cipher( algorithms.AES( key ), modes.CBC( iv ), backend=backend )
+    cipher = Cipher( 
+      algorithms.AES( key ), 
+      modes.CBC( iv ), 
+      backend=backend 
+    )
     encryptor = cipher.encryptor()
     ciphertext = encryptor.update( padded_plaintext ) + encryptor.finalize()
     
     encrypted_key = public_key.encrypt(
       key,
       cryptography.hazmat.primitives.asymmetric.padding.OAEP(
-        mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1( algorithm=hashes.SHA1() ),
+        mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1( 
+          algorithm=hashes.SHA1() 
+        ),
         algorithm=hashes.SHA1(),
         label=None
       )
@@ -120,7 +126,7 @@ def encrypt ( private_key, args ) :
     
     signer = private_key.signer(
       cryptography.hazmat.primitives.asymmetric.padding.PSS(
-        mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(hashes.SHA256()),
+        mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1( hashes.SHA256() ),
         salt_length=cryptography.hazmat.primitives.asymmetric.padding.PSS.MAX_LENGTH
       ),
       hashes.SHA256()
@@ -200,7 +206,9 @@ def decrypt ( private_key, args ) :
       verifier = public_key.verifier(
         signature,
         cryptography.hazmat.primitives.asymmetric.padding.PSS(
-          mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1( hashes.SHA256() ),
+          mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1( 
+            hashes.SHA256() 
+          ),
           salt_length=cryptography.hazmat.primitives.asymmetric.padding.PSS.MAX_LENGTH
         ),
         hashes.SHA256()
@@ -219,14 +227,20 @@ def decrypt ( private_key, args ) :
       key = private_key.decrypt(
         encrypted_key,
         cryptography.hazmat.primitives.asymmetric.padding.OAEP(
-          mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(algorithm=hashes.SHA1()),
+          mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(
+            algorithm=hashes.SHA1()
+          ),
           algorithm=hashes.SHA1(),
           label=None
         )
       )
       
       print ( """  - Decrypt file(s)...""" )
-      cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=backend)
+      cipher = Cipher(
+        algorithms.AES( key ), 
+        modes.CBC( iv ), 
+        backend=backend
+      )
       decryptor = cipher.decryptor()
       padded_plaintext = decryptor.update( ciphertext ) + decryptor.finalize()
       
