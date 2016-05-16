@@ -6,6 +6,10 @@ e:
 d:
 	./medivac.py -d ~/.ssh/private.pem medfile.medivac ./out/
 
+clean:
+	rm -f ./medfile.medivac
+	rm -f ./out/*
+
 install:
 	rm -f /usr/local/bin/medivac
 	cp ./medivac.py /usr/local/bin/medivac

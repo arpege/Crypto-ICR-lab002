@@ -49,11 +49,13 @@ def printHeadDecrypt () :
 # display the help
 def printMan () :
   print ( """
-  Medivac version 1.0
-  Author: Joel Gugger <joel.gugger@master.hes-so.ch>
+  Medivac version 1.1
+  author: Joel Gugger <joel.gugger@master.hes-so.ch>
   
-  Usage:  medivac source_file ...
-          medivac -d medivac_file [output_directory]
+  usage:  medivac pem_key_path source_file ...
+          medivac -d pem_key_path medivac_file [output_directory]
+          
+  default output_directory is '.'
   """ )
 
 # Encrypt function
@@ -271,6 +273,11 @@ def decrypt ( private_key, args ) :
   
 def error_then_quit () :
   # TODO remove all file
+  print ( """
+   ----------------------------------------
+  |     An error occured, process quit     |
+   ----------------------------------------
+  """ )
   sys.exit( 0 )
   
 # Main function
