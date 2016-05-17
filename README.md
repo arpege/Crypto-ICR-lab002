@@ -131,3 +131,153 @@ Scrypt output :
 ### Installation
 
 To test it on a UNIX environment you can execute `make install`. It will effectively copy the executable in the folder `/usr/local/bin`. The utility will be available after that whit the `medivac` command.
+
+
+### Test suite
+
+To run the test suite you can execute `make test`. It will execute an encryption/decryption with success and then try to modify tree times the ciphertext, the key and the signature to test the decryption mechanisme.
+
+```
+./test_suite.py
+
+
+
+    ************************************
+    >>>>>        Start test        <<<<<
+    ************************************
+
+  ___                       _   
+ | __|_ _  __ _ _ _  _ _ __| |_ 
+ | _|| ' \/ _| '_| || | '_ \  _|
+ |___|_||_\__|_|  \_, | .__/\__|
+                  |__/|_|       
+                  
+                  
+
+  Start compresion...
+
+   * Adding file1.txt
+   * Adding file2.txt
+
+
+  Start encryption:
+
+  - Generating key...
+  - Encrypt...
+  - Signing...
+  - Saving file...
+
+
+  Removing temp files...
+
+   * medfile.zip removed
+
+   ----------------------------------------
+  | Medivac encryption finish with success |
+   ----------------------------------------
+  
+  ___                       _   
+ |   \ ___ __ _ _ _  _ _ __| |_ 
+ | |) / -_) _| '_| || | '_ \  _|
+ |___/\___\__|_|  \_, | .__/\__|
+                  |__/|_|       
+                  
+                  
+  Reading file ./medfile.medivac
+  Output result in ./out/
+
+  Start decryption:
+
+  - Check signature...
+  - Retreive key...
+  - Decrypt file(s)...
+  - Saving file...
+
+
+  Removing temp files...
+
+   * medfile.zip removed
+
+   ----------------------------------------
+  | Medivac decryption finish with success |
+   ----------------------------------------
+  
+
+
+
+    ************************************
+    >>>>> Trigger signature  error <<<<<
+    ************************************
+
+  ___                       _   
+ |   \ ___ __ _ _ _  _ _ __| |_ 
+ | |) / -_) _| '_| || | '_ \  _|
+ |___/\___\__|_|  \_, | .__/\__|
+                  |__/|_|       
+                  
+                  
+  Reading file ./medfile.medivac
+  Output result in ./out/
+
+  Start decryption:
+
+  - Check signature...
+
+   ----------------------------------------
+  |     An error occured, process quit     |
+   ----------------------------------------
+  
+
+
+
+    ************************************
+    >>>>>    Trigger key  error    <<<<<
+    ************************************
+
+  ___                       _   
+ |   \ ___ __ _ _ _  _ _ __| |_ 
+ | |) / -_) _| '_| || | '_ \  _|
+ |___/\___\__|_|  \_, | .__/\__|
+                  |__/|_|       
+                  
+                  
+  Reading file ./medfile.medivac
+  Output result in ./out/
+
+  Start decryption:
+
+  - Check signature...
+  - Retreive key...
+
+   ----------------------------------------
+  |     An error occured, process quit     |
+   ----------------------------------------
+  
+
+
+
+    ************************************
+    >>>>>  Trigger decrypt error   <<<<<
+    ************************************
+
+  ___                       _   
+ |   \ ___ __ _ _ _  _ _ __| |_ 
+ | |) / -_) _| '_| || | '_ \  _|
+ |___/\___\__|_|  \_, | .__/\__|
+                  |__/|_|       
+                  
+                  
+  Reading file ./medfile.medivac
+  Output result in ./out/
+
+  Start decryption:
+
+  - Check signature...
+  - Retreive key...
+  - Decrypt file(s)...
+
+   ----------------------------------------
+  |     An error occured, process quit     |
+   ----------------------------------------
+  
+```
