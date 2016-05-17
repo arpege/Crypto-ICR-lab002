@@ -224,29 +224,35 @@ def decrypt ( private_key, args ) :
       ciphertext = for_signature[272:]
       
       print ( """  - Retreive key...""" )
-      key = private_key.decrypt(
-        encrypted_key,
-        cryptography.hazmat.primitives.asymmetric.padding.OAEP(
-          mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(
-            algorithm=hashes.SHA1()
-          ),
-          algorithm=hashes.SHA1(),
-          label=None
+      try:
+        key = private_key.decrypt(
+          encrypted_key,
+          cryptography.hazmat.primitives.asymmetric.padding.OAEP(
+            mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(
+              algorithm=hashes.SHA1()
+            ),
+            algorithm=hashes.SHA1(),
+            label=None
+          )
         )
-      )
+      except:
+        error_then_quit()
       
       print ( """  - Decrypt file(s)...""" )
-      cipher = Cipher(
-        algorithms.AES( key ), 
-        modes.CBC( iv ), 
-        backend=backend
-      )
-      decryptor = cipher.decryptor()
-      padded_plaintext = decryptor.update( ciphertext ) + decryptor.finalize()
-      
-      unpadder = padding.PKCS7(128).unpadder()
-      plaintext = unpadder.update( padded_plaintext )
-      plaintext += unpadder.finalize()
+      try:
+        cipher = Cipher(
+          algorithms.AES( key ), 
+          modes.CBC( iv ), 
+          backend=backend
+        )
+        decryptor = cipher.decryptor()
+        padded_plaintext = decryptor.update( ciphertext ) + decryptor.finalize()
+
+        unpadder = padding.PKCS7(128).unpadder()
+        plaintext = unpadder.update( padded_plaintext )
+        plaintext += unpadder.finalize()
+      except:
+        error_then_quit()
       
       print ( """  - Saving file...\n""" )
       if os.path.isfile( ZIP_FILENAME ) :

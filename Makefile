@@ -5,6 +5,9 @@ e:
 
 d:
 	./medivac.py -d ~/.ssh/private.pem medfile.medivac ./out/
+	
+test:
+	./test_suite.py
 
 clean:
 	rm -f ./medfile.medivac
